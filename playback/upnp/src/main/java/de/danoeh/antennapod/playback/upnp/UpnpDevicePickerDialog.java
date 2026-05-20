@@ -55,6 +55,7 @@ public class UpnpDevicePickerDialog extends DialogFragment {
     public void onStart() {
         super.onStart();
         EventBus.getDefault().register(this);
+        UpnpDeviceManager.getInstance().startDiscovery(requireContext());
         UpnpDeviceManager.getInstance().refreshDiscovery();
     }
 

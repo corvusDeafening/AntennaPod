@@ -61,6 +61,10 @@ public class UpnpDeviceManager {
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.d(TAG, "jUPnP service connected");
             upnpService = (AndroidUpnpService) service;
+            if (upnpService.getRegistry() == null) {
+                Log.w(TAG, "jUPnP registry is null — service did not initialise correctly");
+                return;
+            }
             upnpService.getRegistry().addListener(registryListener);
             upnpService.getControlPoint().search(new org.jupnp.model.message.header.UDADeviceTypeHeader(
                     new UDADeviceType("MediaRenderer", 1)));
