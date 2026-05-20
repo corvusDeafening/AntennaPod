@@ -73,6 +73,9 @@ preferencesearch = { module = "com.bytehamster:lib.preferencesearch", version = 
 balloon = { module = "com.github.skydoves:balloon", version = "1.5.3" }
 recyclerview-swipedecorator = { module = "it.xabaras.android:recyclerview-swipedecorator", version = "1.4" }
 nanohttpd = { module = "com.nanohttpd:nanohttpd", version = "2.1.1" }
+jupnp = { module = "org.jupnp:jupnp", version = "3.0.3" }
+jupnp-support = { module = "org.jupnp:org.jupnp.support", version = "3.0.3" }
+jupnp-android = { module = "org.jupnp:org.jupnp.android", version = "3.0.3" }
 awaitility = { module = "org.awaitility:awaitility", version = "3.1.6" }
 junit = { module = "junit:junit", version = "4.13" }
 robolectric = { module = "org.robolectric:robolectric", version = "4.16" }

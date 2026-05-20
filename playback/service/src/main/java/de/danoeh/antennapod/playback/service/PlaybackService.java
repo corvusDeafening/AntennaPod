@@ -110,6 +110,8 @@ import de.danoeh.antennapod.playback.base.PlaybackServiceMediaPlayer;
 import de.danoeh.antennapod.playback.base.PlayerStatus;
 import de.danoeh.antennapod.playback.cast.CastPsmp;
 import de.danoeh.antennapod.playback.cast.CastStateListener;
+import de.danoeh.antennapod.playback.upnp.UpnpPsmp;
+import de.danoeh.antennapod.playback.upnp.UpnpStateListener;
 import de.danoeh.antennapod.storage.preferences.UserPreferences;
 import de.danoeh.antennapod.ui.appstartintent.MainActivityStarter;
 import de.danoeh.antennapod.ui.appstartintent.VideoPlayerActivityStarter;
@@ -170,6 +172,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
     private Disposable positionEventTimer;
     private PlaybackServiceNotificationBuilder notificationBuilder;
     private CastStateListener castStateListener;
+    private UpnpStateListener upnpStateListener;
     private final CompositeDisposable singleShotDisposables = new CompositeDisposable();
 
     private String autoSkippedFeedMediaId = null;
@@ -267,6 +270,12 @@ public class PlaybackService extends MediaBrowserServiceCompat {
                 recreateMediaPlayer();
             }
         };
+        upnpStateListener = new UpnpStateListener() {
+            @Override
+            public void onSessionStartedOrEnded() {
+                recreateMediaPlayer();
+            }
+        };
         EventBus.getDefault().post(new PlaybackServiceEvent(PlaybackServiceEvent.Action.SERVICE_STARTED));
     }
 
@@ -303,7 +312,10 @@ public class PlaybackService extends MediaBrowserServiceCompat {
         }
         mediaPlayer = CastPsmp.getInstanceIfConnected(this, mediaPlayerCallback);
         if (mediaPlayer == null) {
-            mediaPlayer = new LocalPSMP(this, mediaPlayerCallback); // Cast not supported or not connected
+            mediaPlayer = UpnpPsmp.getInstanceIfConnected(this, mediaPlayerCallback);
+        }
+        if (mediaPlayer == null) {
+            mediaPlayer = new LocalPSMP(this, mediaPlayerCallback); // No remote device connected
         }
         if (media != null) {
             mediaPlayer.playMediaObject(media, !media.localFileAvailable(), wasPlaying, true);
@@ -333,6 +345,7 @@ public class PlaybackService extends MediaBrowserServiceCompat {
         isRunning = false;
         currentMediaType = MediaType.UNKNOWN;
         castStateListener.destroy();
+        upnpStateListener.destroy();
 
         androidAutoConnectionState.removeObserver(androidAutoConnectionObserver);
         cancelPositionObserver();

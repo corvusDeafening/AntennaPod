@@ -48,7 +48,7 @@ import de.danoeh.antennapod.net.download.serviceinterface.DownloadServiceInterfa
 import de.danoeh.antennapod.net.download.serviceinterface.FeedUpdateManager;
 import de.danoeh.antennapod.net.common.NetworkUtils;
 import de.danoeh.antennapod.net.sync.serviceinterface.SynchronizationQueue;
-import de.danoeh.antennapod.playback.cast.CastEnabledActivity;
+import de.danoeh.antennapod.playback.upnp.UpnpEnabledActivity;
 import de.danoeh.antennapod.playback.service.PlaybackController;
 import de.danoeh.antennapod.storage.databasemaintenanceservice.DatabaseMaintenanceWorker;
 import de.danoeh.antennapod.storage.importexport.AutomaticDatabaseExportWorker;
@@ -94,7 +94,7 @@ import java.util.Objects;
 /**
  * The activity that is shown when the user launches the app.
  */
-public class MainActivity extends CastEnabledActivity implements NavigationToolbarActivity {
+public class MainActivity extends UpnpEnabledActivity implements NavigationToolbarActivity {
 
     private static final String TAG = "MainActivity";
     public static final String MAIN_FRAGMENT_TAG = "main";

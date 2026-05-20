@@ -36,7 +36,7 @@ import de.danoeh.antennapod.model.feed.FeedItem;
 import de.danoeh.antennapod.model.feed.FeedMedia;
 import de.danoeh.antennapod.model.playback.Playable;
 import de.danoeh.antennapod.playback.base.PlayerStatus;
-import de.danoeh.antennapod.playback.cast.CastEnabledActivity;
+import de.danoeh.antennapod.playback.upnp.UpnpEnabledActivity;
 import de.danoeh.antennapod.playback.service.PlaybackController;
 import de.danoeh.antennapod.playback.service.PlaybackService;
 import de.danoeh.antennapod.storage.database.DBReader;
@@ -66,7 +66,7 @@ import java.util.Collections;
 /**
  * Activity for playing video files.
  */
-public class VideoplayerActivity extends CastEnabledActivity
+public class VideoplayerActivity extends UpnpEnabledActivity
         implements Toolbar.OnMenuItemClickListener {
     private static final String TAG = "VideoplayerActivity";
 
@@ -129,6 +129,7 @@ public class VideoplayerActivity extends CastEnabledActivity
         Toolbar toolbar = viewBinding.controlsView.getToolbar();
         toolbar.inflateMenu(R.menu.mediaplayer);
         requestCastButton(toolbar.getMenu());
+        requestUpnpButton(toolbar.getMenu());
         toolbar.setOnMenuItemClickListener(this);
         toolbar.setNavigationOnClickListener(v -> {
             Intent intent = new Intent(VideoplayerActivity.this, MainActivity.class);
@@ -448,6 +449,9 @@ public class VideoplayerActivity extends CastEnabledActivity
 
     @Override
     public boolean onMenuItemClick(MenuItem item) {
+        if (onUpnpMenuItemSelected(item)) {
+            return true;
+        }
         if (item.getItemId() == R.id.player_switch_to_audio_only) {
             switchToAudioOnly = true;
             finish();
