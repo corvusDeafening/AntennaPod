@@ -68,7 +68,7 @@ import de.danoeh.antennapod.model.feed.Chapter;
 import de.danoeh.antennapod.model.feed.FeedItem;
 import de.danoeh.antennapod.model.feed.FeedMedia;
 import de.danoeh.antennapod.model.playback.Playable;
-import de.danoeh.antennapod.playback.cast.CastEnabledActivity;
+import de.danoeh.antennapod.playback.upnp.UpnpEnabledActivity;
 import de.danoeh.antennapod.storage.preferences.UserPreferences;
 import io.reactivex.rxjava3.core.Maybe;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
@@ -488,11 +488,19 @@ public class AudioPlayerFragment extends Fragment implements
         toolbar.getMenu().findItem(R.id.open_feed_item).setVisible(true);
         FeedItemMenuHandler.onPrepareMenu(toolbar.getMenu(),
                 Collections.singletonList(currentMedia.getItem()));
-        ((CastEnabledActivity) getActivity()).requestCastButton(toolbar.getMenu());
+        if (getActivity() instanceof UpnpEnabledActivity) {
+            UpnpEnabledActivity activity = (UpnpEnabledActivity) getActivity();
+            activity.requestCastButton(toolbar.getMenu());
+            activity.requestUpnpButton(toolbar.getMenu());
+        }
     }
 
     @Override
     public boolean onMenuItemClick(MenuItem item) {
+        if (getActivity() instanceof UpnpEnabledActivity
+                && ((UpnpEnabledActivity) getActivity()).onUpnpMenuItemSelected(item)) {
+            return true;
+        }
         if (currentMedia == null) {
             return false;
         }

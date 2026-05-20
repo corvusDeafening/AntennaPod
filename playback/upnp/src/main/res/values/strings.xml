@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="upnp_cast_to_device">Cast to network device</string>
+    <string name="upnp_device_picker_title">Select Network Device</string>
+    <string name="upnp_disconnect">Disconnect</string>
+    <string name="upnp_no_devices_found">No UPnP/DLNA devices found on network</string>
+    <string name="upnp_searching">Searching for devices&#8230;</string>
+    <string name="upnp_cast_active">Casting to: %1$s</string>
+</resources>
