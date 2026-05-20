@@ -9,12 +9,6 @@ import de.danoeh.antennapod.playback.cast.CastEnabledActivity;
 public abstract class UpnpEnabledActivity extends CastEnabledActivity {
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        UpnpDeviceManager.getInstance().startDiscovery(this);
-    }
-
-    @Override
     protected void onDestroy() {
         super.onDestroy();
         UpnpDeviceManager.getInstance().stopDiscovery(this);
