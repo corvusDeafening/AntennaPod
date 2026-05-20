@@ -6,6 +6,9 @@ apply from: "../../playFlavor.gradle"
 
 android {
     namespace "de.danoeh.antennapod.playback.upnp"
+    defaultConfig {
+        consumerProguardFiles "consumer-rules.pro"
+    }
 }
 
 dependencies {
