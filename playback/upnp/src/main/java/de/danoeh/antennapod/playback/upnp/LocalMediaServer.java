@@ -14,6 +14,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteOrder;
+import java.util.Locale;
 
 public class LocalMediaServer extends NanoHTTPD {
 
@@ -81,7 +82,7 @@ public class LocalMediaServer extends NanoHTTPD {
 
     @NonNull
     private static String guessMimeType(@NonNull String path) {
-        String lower = path.toLowerCase();
+        String lower = path.toLowerCase(Locale.ROOT);
         if (lower.endsWith(".mp3")) {
             return "audio/mpeg";
         } else if (lower.endsWith(".m4a") || lower.endsWith(".mp4")) {

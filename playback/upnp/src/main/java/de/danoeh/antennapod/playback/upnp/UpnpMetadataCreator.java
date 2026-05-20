@@ -18,8 +18,8 @@ public class UpnpMetadataCreator {
         String title = escapeXml(playable.getEpisodeTitle());
         String artist = escapeXml(playable.getFeedTitle());
         String artworkUrl = playable.getImageLocation();
-        String duration = durationMs > 0 ? formatDuration(durationMs) : "0:00:00";
-        String mime = mimeType != null ? mimeType : "audio/mpeg";
+        final String duration = durationMs > 0 ? formatDuration(durationMs) : "0:00:00";
+        final String mime = mimeType != null ? mimeType : "audio/mpeg";
 
         StringBuilder sb = new StringBuilder();
         sb.append("<DIDL-Lite xmlns=\"urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/\"")
@@ -33,13 +33,10 @@ public class UpnpMetadataCreator {
             sb.append("<upnp:albumArtURI>").append(escapeXml(artworkUrl)).append("</upnp:albumArtURI>");
         }
 
-        sb.append("<upnp:class>object.item.audioItem.musicTrack</upnp:class>")
-          .append("<res protocolInfo=\"http-get:*:").append(mime).append(":*\"")
-          .append(" duration=\"").append(duration).append("\">")
-          .append(escapeXml(streamUrl))
-          .append("</res>")
-          .append("</item>")
-          .append("</DIDL-Lite>");
+        sb.append("<upnp:class>object.item.audioItem.musicTrack</upnp:class>");
+        sb.append("<res protocolInfo=\"http-get:*:" + mime + ":*\" duration=\"" + duration + "\">");
+        sb.append(escapeXml(streamUrl));
+        sb.append("</res></item></DIDL-Lite>");
 
         return sb.toString();
     }
