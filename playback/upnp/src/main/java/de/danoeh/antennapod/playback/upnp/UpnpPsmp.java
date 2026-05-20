@@ -9,7 +9,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import de.danoeh.antennapod.event.PlayerErrorEvent;
-import de.danoeh.antennapod.event.playback.BufferUpdateEvent;
 import de.danoeh.antennapod.event.playback.SpeedChangedEvent;
 import de.danoeh.antennapod.model.playback.MediaType;
 import de.danoeh.antennapod.model.playback.Playable;
@@ -473,7 +472,7 @@ public class UpnpPsmp extends PlaybackServiceMediaPlayer {
 
     private void startPositionPoller() {
         stopPositionPoller();
-        positionPoller = executor.scheduleAtFixedRate(this::pollPosition, 1, 1, TimeUnit.SECONDS);
+        positionPoller = executor.scheduleWithFixedDelay(this::pollPosition, 1, 1, TimeUnit.SECONDS);
     }
 
     private void stopPositionPoller() {
