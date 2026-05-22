@@ -5,7 +5,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.net.wifi.WifiManager;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -61,13 +63,7 @@ public class UpnpDeviceManager {
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.d(TAG, "jUPnP service connected");
             upnpService = (AndroidUpnpService) service;
-            if (upnpService.getRegistry() == null) {
-                Log.w(TAG, "jUPnP registry is null — service did not initialise correctly");
-                return;
-            }
-            upnpService.getRegistry().addListener(registryListener);
-            upnpService.getControlPoint().search(new org.jupnp.model.message.header.UDADeviceTypeHeader(
-                    new UDADeviceType("MediaRenderer", 1)));
+            startSearch();
         }
 
         @Override
@@ -78,6 +74,22 @@ public class UpnpDeviceManager {
     };
 
     private UpnpDeviceManager() {
+    }
+
+    private void startSearch() {
+        if (upnpService == null) {
+            return;
+        }
+        if (upnpService.getRegistry() == null) {
+            Log.w(TAG, "jUPnP registry not ready yet — retrying in 1 s");
+            new Handler(Looper.getMainLooper()).postDelayed(this::startSearch, 1000);
+            return;
+        }
+        Log.d(TAG, "jUPnP registry ready — starting MediaRenderer search");
+        upnpService.getRegistry().addListener(registryListener);
+        upnpService.getControlPoint().search(
+                new org.jupnp.model.message.header.UDADeviceTypeHeader(
+                        new UDADeviceType("MediaRenderer", 1)));
     }
 
     public static synchronized UpnpDeviceManager getInstance() {
@@ -109,7 +121,7 @@ public class UpnpDeviceManager {
         if (!bound) {
             return;
         }
-        if (upnpService != null) {
+        if (upnpService != null && upnpService.getRegistry() != null) {
             upnpService.getRegistry().removeListener(registryListener);
         }
         context.getApplicationContext().unbindService(serviceConnection);
