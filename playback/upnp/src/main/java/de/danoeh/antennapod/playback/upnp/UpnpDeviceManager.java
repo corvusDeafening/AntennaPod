@@ -30,11 +30,14 @@ public class UpnpDeviceManager {
     private static final String TAG = "UpnpDeviceManager";
     private static UpnpDeviceManager instance;
 
+    private static final int MAX_SEARCH_RETRIES = 30;
+
     private AndroidUpnpService upnpService;
     private final List<RemoteDevice> discoveredDevices = new CopyOnWriteArrayList<>();
     private RemoteDevice selectedDevice;
     private WifiManager.MulticastLock multicastLock;
     private boolean bound = false;
+    private int searchRetryCount = 0;
 
     private final DefaultRegistryListener registryListener = new DefaultRegistryListener() {
         @Override
@@ -63,6 +66,7 @@ public class UpnpDeviceManager {
         public void onServiceConnected(ComponentName name, IBinder service) {
             Log.d(TAG, "jUPnP service connected");
             upnpService = (AndroidUpnpService) service;
+            searchRetryCount = 0;
             startSearch();
         }
 
@@ -80,12 +84,23 @@ public class UpnpDeviceManager {
         if (upnpService == null) {
             return;
         }
-        if (upnpService.getRegistry() == null) {
-            Log.w(TAG, "jUPnP registry not ready yet — retrying in 1 s");
+        if (upnpService.getRegistry() == null || upnpService.getControlPoint() == null) {
+            if (searchRetryCount >= MAX_SEARCH_RETRIES) {
+                Log.e(TAG, "jUPnP never finished initializing after " + MAX_SEARCH_RETRIES
+                        + " s — registry=" + upnpService.getRegistry()
+                        + " controlPoint=" + upnpService.getControlPoint()
+                        + " upnpService.get()=" + upnpService.get());
+                return;
+            }
+            Log.w(TAG, "jUPnP not ready yet — retrying in 1 s (attempt "
+                    + (searchRetryCount + 1) + "/" + MAX_SEARCH_RETRIES
+                    + "); registry=" + upnpService.getRegistry()
+                    + " controlPoint=" + upnpService.getControlPoint());
+            searchRetryCount++;
             new Handler(Looper.getMainLooper()).postDelayed(this::startSearch, 1000);
             return;
         }
-        Log.d(TAG, "jUPnP registry ready — starting MediaRenderer search");
+        Log.d(TAG, "jUPnP ready — starting MediaRenderer search");
         upnpService.getRegistry().addListener(registryListener);
         upnpService.getControlPoint().search(
                 new org.jupnp.model.message.header.UDADeviceTypeHeader(
@@ -127,6 +142,7 @@ public class UpnpDeviceManager {
         context.getApplicationContext().unbindService(serviceConnection);
         bound = false;
         upnpService = null;
+        searchRetryCount = 0;
         if (multicastLock != null && multicastLock.isHeld()) {
             multicastLock.release();
             multicastLock = null;
@@ -135,7 +151,7 @@ public class UpnpDeviceManager {
     }
 
     public void refreshDiscovery() {
-        if (upnpService != null) {
+        if (upnpService != null && upnpService.getControlPoint() != null) {
             upnpService.getControlPoint().search(
                     new org.jupnp.model.message.header.UDADeviceTypeHeader(
                             new UDADeviceType("MediaRenderer", 1)));
