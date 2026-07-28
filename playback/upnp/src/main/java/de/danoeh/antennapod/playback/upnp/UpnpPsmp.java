@@ -18,7 +18,6 @@ import de.danoeh.antennapod.playback.base.RewindAfterPauseUtils;
 
 import org.greenrobot.eventbus.EventBus;
 import org.jupnp.UpnpService;
-import org.jupnp.android.AndroidUpnpService;
 import org.jupnp.model.action.ActionInvocation;
 import org.jupnp.model.message.UpnpResponse;
 import org.jupnp.model.meta.RemoteDevice;
@@ -66,11 +65,11 @@ public class UpnpPsmp extends PlaybackServiceMediaPlayer {
                                                                     @NonNull PSMPCallback callback) {
         UpnpDeviceManager mgr = UpnpDeviceManager.getInstance();
         RemoteDevice device = mgr.getSelectedDevice();
-        AndroidUpnpService androidSvc = mgr.getUpnpService();
-        if (device == null || androidSvc == null || androidSvc.get() == null) {
+        UpnpService svc = mgr.getUpnpService();
+        if (device == null || svc == null) {
             return null;
         }
-        return new UpnpPsmp(context, callback, device, androidSvc.get());
+        return new UpnpPsmp(context, callback, device, svc);
     }
 
     public UpnpPsmp(@NonNull Context context, @NonNull PSMPCallback callback,
