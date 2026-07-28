@@ -84,25 +84,21 @@ public class UpnpDeviceManager {
         if (upnpService == null) {
             return;
         }
-        if (upnpService.getRegistry() == null || upnpService.getControlPoint() == null) {
+        org.jupnp.UpnpService svc = upnpService.get();
+        if (svc == null || svc.getRegistry() == null || svc.getControlPoint() == null) {
             if (searchRetryCount >= MAX_SEARCH_RETRIES) {
-                Log.e(TAG, "jUPnP never finished initializing after " + MAX_SEARCH_RETRIES
-                        + " s — registry=" + upnpService.getRegistry()
-                        + " controlPoint=" + upnpService.getControlPoint()
-                        + " upnpService.get()=" + upnpService.get());
+                Log.e(TAG, "jUPnP never finished initializing after " + MAX_SEARCH_RETRIES + " s");
                 return;
             }
             Log.w(TAG, "jUPnP not ready yet — retrying in 1 s (attempt "
-                    + (searchRetryCount + 1) + "/" + MAX_SEARCH_RETRIES
-                    + "); registry=" + upnpService.getRegistry()
-                    + " controlPoint=" + upnpService.getControlPoint());
+                    + (searchRetryCount + 1) + "/" + MAX_SEARCH_RETRIES + ")");
             searchRetryCount++;
             new Handler(Looper.getMainLooper()).postDelayed(this::startSearch, 1000);
             return;
         }
         Log.d(TAG, "jUPnP ready — starting MediaRenderer search");
-        upnpService.getRegistry().addListener(registryListener);
-        upnpService.getControlPoint().search(
+        svc.getRegistry().addListener(registryListener);
+        svc.getControlPoint().search(
                 new org.jupnp.model.message.header.UDADeviceTypeHeader(
                         new UDADeviceType("MediaRenderer", 1)));
     }
@@ -136,8 +132,9 @@ public class UpnpDeviceManager {
         if (!bound) {
             return;
         }
-        if (upnpService != null && upnpService.getRegistry() != null) {
-            upnpService.getRegistry().removeListener(registryListener);
+        if (upnpService != null && upnpService.get() != null
+                && upnpService.get().getRegistry() != null) {
+            upnpService.get().getRegistry().removeListener(registryListener);
         }
         context.getApplicationContext().unbindService(serviceConnection);
         bound = false;
@@ -151,8 +148,9 @@ public class UpnpDeviceManager {
     }
 
     public void refreshDiscovery() {
-        if (upnpService != null && upnpService.getControlPoint() != null) {
-            upnpService.getControlPoint().search(
+        if (upnpService != null && upnpService.get() != null
+                && upnpService.get().getControlPoint() != null) {
+            upnpService.get().getControlPoint().search(
                     new org.jupnp.model.message.header.UDADeviceTypeHeader(
                             new UDADeviceType("MediaRenderer", 1)));
         }
