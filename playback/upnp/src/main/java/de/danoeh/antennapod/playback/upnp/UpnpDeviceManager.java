@@ -110,6 +110,20 @@ public class UpnpDeviceManager {
                     Log.e(TAG, "jUPnP registry/controlPoint still null after activate — UPnP disabled");
                     return;
                 }
+                // Log which network interfaces jUPnP will use for SSDP
+                try {
+                    java.util.Enumeration<java.net.NetworkInterface> ifaces =
+                            java.net.NetworkInterface.getNetworkInterfaces();
+                    while (ifaces != null && ifaces.hasMoreElements()) {
+                        java.net.NetworkInterface iface = ifaces.nextElement();
+                        if (iface.isUp() && !iface.isLoopback() && iface.supportsMulticast()) {
+                            Log.d(TAG, "multicast-capable iface: " + iface.getName()
+                                    + " addrs=" + java.util.Collections.list(iface.getInetAddresses()));
+                        }
+                    }
+                } catch (Exception ex) {
+                    Log.w(TAG, "Could not enumerate interfaces", ex);
+                }
                 upnpService = svc;
                 svc.getRegistry().addListener(registryListener);
                 svc.getControlPoint().search(new org.jupnp.model.message.header.STAllHeader());
