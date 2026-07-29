@@ -14,11 +14,13 @@ import org.jupnp.UpnpService;
 import org.jupnp.UpnpServiceImpl;
 import org.jupnp.android.AndroidRouter;
 import org.jupnp.android.AndroidUpnpServiceConfiguration;
+import org.jupnp.model.NetworkAddress;
 import org.jupnp.model.meta.RemoteDevice;
 import org.jupnp.protocol.ProtocolFactory;
 import org.jupnp.registry.DefaultRegistryListener;
 import org.jupnp.registry.Registry;
 import org.jupnp.transport.Router;
+import org.jupnp.transport.spi.StreamServer;
 
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
@@ -84,7 +86,15 @@ public class UpnpDeviceManager {
         new Thread(() -> {
             try {
                 Log.d(TAG, "Creating UpnpServiceImpl with AndroidRouter");
-                UpnpServiceImpl svc = new UpnpServiceImpl(new AndroidUpnpServiceConfiguration()) {
+                UpnpServiceImpl svc = new UpnpServiceImpl(new AndroidUpnpServiceConfiguration() {
+                    @Override
+                    public StreamServer createStreamServer(NetworkAddress bindAddress) {
+                        // Jetty (required by the default impl) is not bundled in the APK.
+                        // Returning null disables UPnP event subscriptions but discovery
+                        // and AVTransport commands still work fine.
+                        return null;
+                    }
+                }) {
                     @Override
                     protected Router createRouter(ProtocolFactory protocolFactory, Registry registry) {
                         return new AndroidRouter(getConfiguration(), protocolFactory, appContext);
