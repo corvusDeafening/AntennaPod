@@ -96,6 +96,7 @@ public class UpnpDeviceManager {
                     public boolean initialSearchEnabled() {
                         return true;
                     }
+
                     @Override
                     public Class<? extends Annotation> annotationType() {
                         return UpnpServiceImpl.Config.class;
