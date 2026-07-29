@@ -15,7 +15,6 @@ import org.jupnp.UpnpServiceImpl;
 import org.jupnp.android.AndroidRouter;
 import org.jupnp.android.AndroidUpnpServiceConfiguration;
 import org.jupnp.model.meta.RemoteDevice;
-import org.jupnp.model.types.UDADeviceType;
 import org.jupnp.protocol.ProtocolFactory;
 import org.jupnp.registry.DefaultRegistryListener;
 import org.jupnp.registry.Registry;
@@ -39,9 +38,11 @@ public class UpnpDeviceManager {
     private final DefaultRegistryListener registryListener = new DefaultRegistryListener() {
         @Override
         public void remoteDeviceAdded(Registry registry, RemoteDevice device) {
+            Log.d(TAG, "UPnP device found: type=" + device.getType()
+                    + " name=" + (device.getDetails() != null ? device.getDetails().getFriendlyName() : "?"));
             if (isMediaRenderer(device)) {
                 discoveredDevices.add(device);
-                Log.d(TAG, "UPnP renderer found: " + device.getDetails().getFriendlyName());
+                Log.d(TAG, "UPnP renderer added: " + device.getDetails().getFriendlyName());
                 EventBus.getDefault().post(new UpnpDeviceDiscoveryEvent(new ArrayList<>(discoveredDevices)));
             }
         }
@@ -111,10 +112,8 @@ public class UpnpDeviceManager {
                 }
                 upnpService = svc;
                 svc.getRegistry().addListener(registryListener);
-                svc.getControlPoint().search(
-                        new org.jupnp.model.message.header.UDADeviceTypeHeader(
-                                new UDADeviceType("MediaRenderer", 1)));
-                Log.d(TAG, "MediaRenderer search issued");
+                svc.getControlPoint().search(new org.jupnp.model.message.header.STAllHeader());
+                Log.d(TAG, "ssdp:all search issued");
             } catch (Exception e) {
                 Log.e(TAG, "Failed to start jUPnP", e);
             }
@@ -150,9 +149,7 @@ public class UpnpDeviceManager {
     public void refreshDiscovery() {
         UpnpService svc = upnpService;
         if (svc != null && svc.getControlPoint() != null) {
-            svc.getControlPoint().search(
-                    new org.jupnp.model.message.header.UDADeviceTypeHeader(
-                            new UDADeviceType("MediaRenderer", 1)));
+            svc.getControlPoint().search(new org.jupnp.model.message.header.STAllHeader());
         }
     }
 
