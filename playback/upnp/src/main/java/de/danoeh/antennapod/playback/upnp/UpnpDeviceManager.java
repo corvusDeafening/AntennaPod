@@ -20,6 +20,7 @@ import org.jupnp.registry.DefaultRegistryListener;
 import org.jupnp.registry.Registry;
 import org.jupnp.transport.Router;
 import org.jupnp.transport.spi.NetworkAddressFactory;
+import org.jupnp.transport.spi.StreamClient;
 import org.jupnp.transport.spi.StreamServer;
 
 import java.lang.annotation.Annotation;
@@ -90,10 +91,15 @@ public class UpnpDeviceManager {
                     @Override
                     @SuppressWarnings("rawtypes")
                     public StreamServer createStreamServer(NetworkAddressFactory naf) {
-                        // Jetty (required by the default impl) is not bundled in the APK.
-                        // Returning null disables UPnP event subscriptions but discovery
-                        // and AVTransport commands still work fine.
+                        // Jetty is not bundled; returning null disables UPnP event
+                        // subscriptions while leaving discovery and control intact.
                         return null;
+                    }
+
+                    @Override
+                    @SuppressWarnings("rawtypes")
+                    public StreamClient createStreamClient() {
+                        return new HttpUrlConnectionStreamClient();
                     }
                 }) {
                     @Override
