@@ -395,14 +395,15 @@ public class Media3PlaybackService extends MediaLibraryService {
             String streamUrl = getStreamUrlFromCurrentPlayable();
             if (streamUrl == null) {
                 Log.w(TAG, "onUpnpSessionChanged: no HTTP stream URL, cannot cast");
+                applyVolumeAdaption(1f);
                 return;
             }
             int positionMs = (int) player.getCurrentPosition();
-            player.pause();
+            applyVolumeAdaption(0f);  // mute local audio; keep ExoPlayer playing to hold service alive
             upnpSession = session;
             upnpSession.startPlayback(streamUrl, currentPlayable, positionMs);
         } else {
-            player.play();
+            applyVolumeAdaption(1f);  // restore local audio
         }
     }
 
