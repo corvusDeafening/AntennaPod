@@ -59,7 +59,6 @@ import de.danoeh.antennapod.ui.appstartintent.MainActivityStarter;
 import de.danoeh.antennapod.ui.chapters.ChapterUtils;
 import de.danoeh.antennapod.ui.episodes.PlaybackSpeedUtils;
 import de.danoeh.antennapod.ui.notifications.NotificationUtils;
-import de.danoeh.antennapod.playback.upnp.UpnpDeviceManager;
 import de.danoeh.antennapod.playback.upnp.UpnpMediaSession;
 import de.danoeh.antennapod.playback.upnp.UpnpStateListener;
 import de.danoeh.antennapod.ui.widget.WidgetUpdater;
