@@ -66,9 +66,12 @@ public class UpnpPsmp extends PlaybackServiceMediaPlayer {
         UpnpDeviceManager mgr = UpnpDeviceManager.getInstance();
         RemoteDevice device = mgr.getSelectedDevice();
         UpnpService svc = mgr.getUpnpService();
+        Log.d(TAG, "getInstanceIfConnected: device=" + (device != null ? device.getDetails().getFriendlyName() : "null")
+                + " svc=" + (svc != null ? "ok" : "null"));
         if (device == null || svc == null) {
             return null;
         }
+        Log.d(TAG, "Creating UpnpPsmp for device: " + device.getDetails().getFriendlyName());
         return new UpnpPsmp(context, callback, device, svc);
     }
 
