@@ -273,9 +273,11 @@ public class PlaybackService extends MediaBrowserServiceCompat {
         upnpStateListener = new UpnpStateListener() {
             @Override
             public void onSessionStartedOrEnded() {
+                Log.d(TAG, "UPnP session changed — recreating media player");
                 recreateMediaPlayer();
             }
         };
+        Log.d(TAG, "onCreate complete — upnpStateListener registered");
         EventBus.getDefault().post(new PlaybackServiceEvent(PlaybackServiceEvent.Action.SERVICE_STARTED));
     }
 
@@ -317,6 +319,9 @@ public class PlaybackService extends MediaBrowserServiceCompat {
         if (mediaPlayer == null) {
             mediaPlayer = new LocalPSMP(this, mediaPlayerCallback); // No remote device connected
         }
+        Log.d(TAG, "recreateMediaPlayer: player=" + mediaPlayer.getClass().getSimpleName()
+                + " media=" + (media != null ? media.getEpisodeTitle() : "null")
+                + " wasPlaying=" + wasPlaying);
         if (media != null) {
             mediaPlayer.playMediaObject(media, !media.localFileAvailable(), wasPlaying, true);
         }
