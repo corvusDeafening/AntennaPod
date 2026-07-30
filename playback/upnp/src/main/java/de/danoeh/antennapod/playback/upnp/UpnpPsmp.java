@@ -127,6 +127,7 @@ public class UpnpPsmp extends PlaybackServiceMediaPlayer {
             return;
         }
 
+        Log.d(TAG, "prepare: url=" + streamUrl + " device=" + device.getDetails().getFriendlyName());
         String mimeType = localMediaServer != null ? localMediaServer.getMimeType() : null;
         String metadata = UpnpMetadataCreator.createMetadata(media, streamUrl, mimeType, durationMs);
 

@@ -61,6 +61,7 @@ class HttpUrlConnectionStreamClient implements StreamClient<StreamClientConfigur
 
     @Override
     public StreamResponseMessage sendRequest(StreamRequestMessage req) throws InterruptedException {
+        Log.d(TAG, "→ " + req.getOperation().getHttpMethodName() + " " + req.getUri());
         HttpURLConnection conn = null;
         try {
             conn = (HttpURLConnection) req.getUri().toURL().openConnection();
@@ -89,6 +90,7 @@ class HttpUrlConnectionStreamClient implements StreamClient<StreamClientConfigur
 
             int statusCode = conn.getResponseCode();
             String statusMessage = conn.getResponseMessage();
+            Log.d(TAG, "← " + statusCode + " " + statusMessage + " (" + req.getUri() + ")");
 
             Map<String, List<String>> rawHeaders = new HashMap<>();
             for (Map.Entry<String, List<String>> entry : conn.getHeaderFields().entrySet()) {

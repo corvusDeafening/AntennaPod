@@ -24,4 +24,7 @@ dependencies {
     implementation libs.jupnp
     implementation libs.jupnp.support
     implementation libs.jupnp.android
+
+    testImplementation libs.junit
+    testImplementation libs.mockito.core
 }

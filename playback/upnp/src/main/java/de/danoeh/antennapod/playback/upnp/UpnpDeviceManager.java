@@ -14,7 +14,9 @@ import org.jupnp.UpnpService;
 import org.jupnp.UpnpServiceImpl;
 import org.jupnp.android.AndroidRouter;
 import org.jupnp.android.AndroidUpnpServiceConfiguration;
+import org.jupnp.model.message.header.UDADeviceTypeHeader;
 import org.jupnp.model.meta.RemoteDevice;
+import org.jupnp.model.types.UDADeviceType;
 import org.jupnp.protocol.ProtocolFactory;
 import org.jupnp.registry.DefaultRegistryListener;
 import org.jupnp.registry.Registry;
@@ -41,13 +43,15 @@ public class UpnpDeviceManager {
     private final DefaultRegistryListener registryListener = new DefaultRegistryListener() {
         @Override
         public void remoteDeviceAdded(Registry registry, RemoteDevice device) {
-            Log.d(TAG, "UPnP device found: type=" + device.getType()
-                    + " name=" + (device.getDetails() != null ? device.getDetails().getFriendlyName() : "?"));
-            if (isMediaRenderer(device)) {
-                discoveredDevices.add(device);
-                Log.d(TAG, "UPnP renderer added: " + device.getDetails().getFriendlyName());
-                EventBus.getDefault().post(new UpnpDeviceDiscoveryEvent(new ArrayList<>(discoveredDevices)));
+            if (!isMediaRenderer(device)) {
+                return;
             }
+            if (isAlreadyDiscovered(discoveredDevices, device)) {
+                return;
+            }
+            discoveredDevices.add(device);
+            Log.d(TAG, "UPnP renderer added: " + device.getDetails().getFriendlyName());
+            EventBus.getDefault().post(new UpnpDeviceDiscoveryEvent(new ArrayList<>(discoveredDevices)));
         }
 
         @Override
@@ -86,7 +90,8 @@ public class UpnpDeviceManager {
         final Context appContext = context.getApplicationContext();
         new Thread(() -> {
             try {
-                Log.d(TAG, "Creating UpnpServiceImpl with AndroidRouter");
+                discoveredDevices.clear();
+                Log.d(TAG, "Starting jUPnP discovery");
                 UpnpServiceImpl svc = new UpnpServiceImpl(new AndroidUpnpServiceConfiguration() {
                     @Override
                     @SuppressWarnings("rawtypes")
@@ -121,30 +126,16 @@ public class UpnpDeviceManager {
                     }
                 });
                 Log.d(TAG, "jUPnP activated — registry=" + svc.getRegistry()
-                        + " cp=" + svc.getControlPoint()
-                        + " router=" + svc.getRouter());
+                        + " cp=" + svc.getControlPoint());
                 if (svc.getRegistry() == null || svc.getControlPoint() == null) {
-                    Log.e(TAG, "jUPnP registry/controlPoint still null after activate — UPnP disabled");
+                    Log.e(TAG, "jUPnP registry/controlPoint null after activate — UPnP disabled");
                     return;
-                }
-                // Log which network interfaces jUPnP will use for SSDP
-                try {
-                    java.util.Enumeration<java.net.NetworkInterface> ifaces =
-                            java.net.NetworkInterface.getNetworkInterfaces();
-                    while (ifaces != null && ifaces.hasMoreElements()) {
-                        java.net.NetworkInterface iface = ifaces.nextElement();
-                        if (iface.isUp() && !iface.isLoopback() && iface.supportsMulticast()) {
-                            Log.d(TAG, "multicast-capable iface: " + iface.getName()
-                                    + " addrs=" + java.util.Collections.list(iface.getInetAddresses()));
-                        }
-                    }
-                } catch (Exception ex) {
-                    Log.w(TAG, "Could not enumerate interfaces", ex);
                 }
                 upnpService = svc;
                 svc.getRegistry().addListener(registryListener);
-                svc.getControlPoint().search(new org.jupnp.model.message.header.STAllHeader());
-                Log.d(TAG, "ssdp:all search issued");
+                svc.getControlPoint().search(
+                        new UDADeviceTypeHeader(new UDADeviceType("MediaRenderer", 1)));
+                Log.d(TAG, "MediaRenderer search issued");
             } catch (Exception e) {
                 Log.e(TAG, "Failed to start jUPnP", e);
             }
@@ -154,21 +145,17 @@ public class UpnpDeviceManager {
 
     public void stopDiscovery(@NonNull Context context) {
         UpnpService svc = upnpService;
-        if (svc == null) {
-            if (multicastLock != null && multicastLock.isHeld()) {
-                multicastLock.release();
-                multicastLock = null;
-            }
-            return;
-        }
         upnpService = null;
-        try {
-            if (svc.getRegistry() != null) {
-                svc.getRegistry().removeListener(registryListener);
+        discoveredDevices.clear();
+        if (svc != null) {
+            try {
+                if (svc.getRegistry() != null) {
+                    svc.getRegistry().removeListener(registryListener);
+                }
+                svc.shutdown();
+            } catch (Exception e) {
+                Log.w(TAG, "Error stopping jUPnP", e);
             }
-            svc.shutdown();
-        } catch (Exception e) {
-            Log.w(TAG, "Error stopping jUPnP", e);
         }
         if (multicastLock != null && multicastLock.isHeld()) {
             multicastLock.release();
@@ -180,7 +167,8 @@ public class UpnpDeviceManager {
     public void refreshDiscovery() {
         UpnpService svc = upnpService;
         if (svc != null && svc.getControlPoint() != null) {
-            svc.getControlPoint().search(new org.jupnp.model.message.header.STAllHeader());
+            svc.getControlPoint().search(
+                    new UDADeviceTypeHeader(new UDADeviceType("MediaRenderer", 1)));
         }
     }
 
@@ -203,6 +191,15 @@ public class UpnpDeviceManager {
     @Nullable
     public UpnpService getUpnpService() {
         return upnpService;
+    }
+
+    static boolean isAlreadyDiscovered(List<RemoteDevice> list, RemoteDevice device) {
+        for (RemoteDevice d : list) {
+            if (d.getIdentity().getUdn().equals(device.getIdentity().getUdn())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isMediaRenderer(RemoteDevice device) {

@@ -7,12 +7,6 @@ import de.danoeh.antennapod.playback.cast.CastEnabledActivity;
 
 public abstract class UpnpEnabledActivity extends CastEnabledActivity {
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        UpnpDeviceManager.getInstance().stopDiscovery(this);
-    }
-
     public void requestUpnpButton(Menu menu) {
         if (menu.findItem(R.id.upnp_device_menu_item) != null) {
             return;
