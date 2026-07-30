@@ -59,6 +59,9 @@ import de.danoeh.antennapod.ui.appstartintent.MainActivityStarter;
 import de.danoeh.antennapod.ui.chapters.ChapterUtils;
 import de.danoeh.antennapod.ui.episodes.PlaybackSpeedUtils;
 import de.danoeh.antennapod.ui.notifications.NotificationUtils;
+import de.danoeh.antennapod.playback.upnp.UpnpDeviceManager;
+import de.danoeh.antennapod.playback.upnp.UpnpMediaSession;
+import de.danoeh.antennapod.playback.upnp.UpnpStateListener;
 import de.danoeh.antennapod.ui.widget.WidgetUpdater;
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
 import io.reactivex.rxjava3.core.Maybe;
@@ -92,6 +95,9 @@ public class Media3PlaybackService extends MediaLibraryService {
     @Nullable
     private LoudnessEnhancer loudnessEnhancer = null;
     private float volumeAdaptionFactor = 1.0f;
+    private UpnpStateListener upnpStateListener;
+    @Nullable
+    private UpnpMediaSession upnpSession;
 
     @UnstableApi
     @Override
@@ -179,6 +185,13 @@ public class Media3PlaybackService extends MediaLibraryService {
         mediaSession = new MediaLibraryService.MediaLibrarySession.Builder(this, player, sessionCallback)
                 .setSessionActivity(new MainActivityStarter(this).withOpenPlayer().getPendingIntent())
                 .build();
+        upnpStateListener = new UpnpStateListener() {
+            @Override
+            public void onSessionStartedOrEnded() {
+                onUpnpSessionChanged();
+            }
+        };
+        Log.d(TAG, "onCreate complete — upnpStateListener registered");
     }
 
     MediaLibrarySessionCallback sessionCallback = new MediaLibrarySessionCallback(this) {
@@ -336,6 +349,13 @@ public class Media3PlaybackService extends MediaLibraryService {
     @Override
     public void onDestroy() {
         PlaybackService.isRunning = false;
+        if (upnpStateListener != null) {
+            upnpStateListener.destroy();
+        }
+        if (upnpSession != null) {
+            upnpSession.stop();
+            upnpSession = null;
+        }
         cancelPositionObserver();
         if (sleepTimer != null) {
             sleepTimer.stop();
@@ -364,6 +384,39 @@ public class Media3PlaybackService extends MediaLibraryService {
             mediaSession.release();
         }
         super.onDestroy();
+    }
+
+    private void onUpnpSessionChanged() {
+        if (upnpSession != null) {
+            upnpSession.stop();
+            upnpSession = null;
+        }
+        UpnpMediaSession session = UpnpMediaSession.fromCurrentDevice();
+        if (session != null) {
+            String streamUrl = getStreamUrlFromCurrentPlayable();
+            if (streamUrl == null) {
+                Log.w(TAG, "onUpnpSessionChanged: no HTTP stream URL, cannot cast");
+                return;
+            }
+            int positionMs = (int) player.getCurrentPosition();
+            player.pause();
+            upnpSession = session;
+            upnpSession.startPlayback(streamUrl, currentPlayable, positionMs);
+        } else {
+            player.play();
+        }
+    }
+
+    @Nullable
+    private String getStreamUrlFromCurrentPlayable() {
+        if (currentPlayable == null) {
+            return null;
+        }
+        String url = currentPlayable.getStreamUrl();
+        if (url != null && (url.startsWith("http://") || url.startsWith("https://"))) {
+            return url;
+        }
+        return null;
     }
 
     private void setupPositionObserver() {
