@@ -1,7 +1,12 @@
 package de.danoeh.antennapod.playback.service;
 
+import android.database.ContentObserver;
+import android.media.AudioManager;
 import android.media.audiofx.LoudnessEnhancer;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.provider.Settings;
 import android.util.Log;
 import android.webkit.URLUtil;
 import androidx.annotation.NonNull;
@@ -97,6 +102,9 @@ public class Media3PlaybackService extends MediaLibraryService {
     private UpnpStateListener upnpStateListener;
     @Nullable
     private UpnpMediaSession upnpSession;
+    @Nullable
+    private ContentObserver volumeObserver;
+    private int lastSentVolumePercent = -1;
 
     @UnstableApi
     @Override
@@ -355,6 +363,7 @@ public class Media3PlaybackService extends MediaLibraryService {
             upnpSession.stop();
             upnpSession = null;
         }
+        stopVolumeObserver();
         cancelPositionObserver();
         if (sleepTimer != null) {
             sleepTimer.stop();
@@ -390,6 +399,7 @@ public class Media3PlaybackService extends MediaLibraryService {
             upnpSession.stop();
             upnpSession = null;
         }
+        stopVolumeObserver();
         UpnpMediaSession session = UpnpMediaSession.fromCurrentDevice();
         if (session != null) {
             String streamUrl = getStreamUrlFromCurrentPlayable();
@@ -402,9 +412,49 @@ public class Media3PlaybackService extends MediaLibraryService {
             applyVolumeAdaption(0f);  // mute local audio; keep ExoPlayer playing to hold service alive
             upnpSession = session;
             upnpSession.startPlayback(streamUrl, currentPlayable, positionMs);
+            startVolumeObserver();
         } else {
             applyVolumeAdaption(1f);  // restore local audio
         }
+    }
+
+    private void startVolumeObserver() {
+        AudioManager audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
+        if (audioManager == null) {
+            return;
+        }
+        // Immediately sync current phone volume to WiiM
+        int systemVol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+        int maxVol = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+        lastSentVolumePercent = (int) Math.round(systemVol * 100.0 / maxVol);
+        if (upnpSession != null) {
+            upnpSession.setVolume(lastSentVolumePercent);
+        }
+        volumeObserver = new ContentObserver(new Handler(Looper.getMainLooper())) {
+            @Override
+            public void onChange(boolean selfChange) {
+                if (upnpSession == null) {
+                    return;
+                }
+                int vol = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC);
+                int maxV = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC);
+                int percent = (int) Math.round(vol * 100.0 / maxV);
+                if (percent != lastSentVolumePercent) {
+                    lastSentVolumePercent = percent;
+                    upnpSession.setVolume(percent);
+                }
+            }
+        };
+        getContentResolver().registerContentObserver(
+                Settings.System.CONTENT_URI, true, volumeObserver);
+    }
+
+    private void stopVolumeObserver() {
+        if (volumeObserver != null) {
+            getContentResolver().unregisterContentObserver(volumeObserver);
+            volumeObserver = null;
+        }
+        lastSentVolumePercent = -1;
     }
 
     @Nullable

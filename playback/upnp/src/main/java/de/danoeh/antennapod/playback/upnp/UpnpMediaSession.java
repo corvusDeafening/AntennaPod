@@ -17,6 +17,7 @@ import org.jupnp.support.avtransport.callback.Seek;
 import org.jupnp.support.avtransport.callback.SetAVTransportURI;
 import org.jupnp.support.avtransport.callback.Stop;
 import org.jupnp.support.model.SeekMode;
+import org.jupnp.support.renderingcontrol.callback.SetVolume;
 
 /**
  * Sends SOAP commands to a UPnP AVTransport renderer.
@@ -133,9 +134,34 @@ public class UpnpMediaSession {
         });
     }
 
+    public void setVolume(int volume0to100) {
+        Service renderingControl = getRenderingControl();
+        if (renderingControl == null) {
+            Log.w(TAG, "No RenderingControl on " + device.getDetails().getFriendlyName());
+            return;
+        }
+        upnpService.getControlPoint().execute(
+                new SetVolume(renderingControl, (long) volume0to100) {
+                    @Override
+                    public void success(ActionInvocation invocation) {
+                        Log.d(TAG, "SetVolume " + volume0to100 + " succeeded");
+                    }
+
+                    @Override
+                    public void failure(ActionInvocation invocation, UpnpResponse response, String msg) {
+                        Log.w(TAG, "SetVolume failed: " + msg);
+                    }
+                });
+    }
+
     @Nullable
     private Service getAvTransport() {
         return device.findService(new UDAServiceType("AVTransport", 1));
+    }
+
+    @Nullable
+    private Service getRenderingControl() {
+        return device.findService(new UDAServiceType("RenderingControl", 1));
     }
 
     private static String buildMinimalMetadata(String streamUrl) {
