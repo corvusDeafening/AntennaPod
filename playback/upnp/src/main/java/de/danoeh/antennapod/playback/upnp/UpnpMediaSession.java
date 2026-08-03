@@ -1,5 +1,6 @@
 package de.danoeh.antennapod.playback.upnp;
 
+import android.os.Handler;
 import android.util.Log;
 
 import androidx.annotation.Nullable;
@@ -12,10 +13,13 @@ import org.jupnp.model.message.UpnpResponse;
 import org.jupnp.model.meta.RemoteDevice;
 import org.jupnp.model.meta.Service;
 import org.jupnp.model.types.UDAServiceType;
+import org.jupnp.support.avtransport.callback.GetPositionInfo;
+import org.jupnp.support.avtransport.callback.Pause;
 import org.jupnp.support.avtransport.callback.Play;
 import org.jupnp.support.avtransport.callback.Seek;
 import org.jupnp.support.avtransport.callback.SetAVTransportURI;
 import org.jupnp.support.avtransport.callback.Stop;
+import org.jupnp.support.model.PositionInfo;
 import org.jupnp.support.model.SeekMode;
 import org.jupnp.support.renderingcontrol.callback.SetVolume;
 
@@ -25,6 +29,10 @@ import org.jupnp.support.renderingcontrol.callback.SetVolume;
  */
 @SuppressWarnings("rawtypes")
 public class UpnpMediaSession {
+
+    public interface PositionCallback {
+        void onPosition(int positionMs);
+    }
 
     private static final String TAG = "UpnpMediaSession";
 
@@ -91,6 +99,68 @@ public class UpnpMediaSession {
             @Override
             public void failure(ActionInvocation invocation, UpnpResponse response, String msg) {
                 Log.w(TAG, "Stop failed: " + msg);
+            }
+        });
+    }
+
+    public void seekTo(int positionMs) {
+        Service avTransport = getAvTransport();
+        if (avTransport == null) {
+            return;
+        }
+        upnpService.getControlPoint().execute(
+                new Seek(avTransport, SeekMode.REL_TIME, UpnpMetadataCreator.formatDuration(positionMs)) {
+                    @Override
+                    public void success(ActionInvocation invocation) {
+                        Log.d(TAG, "Seek to " + positionMs + "ms succeeded");
+                    }
+
+                    @Override
+                    public void failure(ActionInvocation invocation, UpnpResponse response, String msg) {
+                        Log.w(TAG, "Seek failed: " + msg);
+                    }
+                });
+    }
+
+    public void pause() {
+        Service avTransport = getAvTransport();
+        if (avTransport == null) {
+            return;
+        }
+        upnpService.getControlPoint().execute(new Pause(avTransport) {
+            @Override
+            public void success(ActionInvocation invocation) {
+                Log.d(TAG, "Pause succeeded");
+            }
+
+            @Override
+            public void failure(ActionInvocation invocation, UpnpResponse response, String msg) {
+                Log.w(TAG, "Pause failed: " + msg);
+            }
+        });
+    }
+
+    public void resume() {
+        doPlay();
+    }
+
+    public void getPositionMs(Handler mainHandler, PositionCallback callback) {
+        Service avTransport = getAvTransport();
+        if (avTransport == null) {
+            mainHandler.post(() -> callback.onPosition(0));
+            return;
+        }
+        upnpService.getControlPoint().execute(new GetPositionInfo(avTransport) {
+            @Override
+            public void received(ActionInvocation invocation, PositionInfo positionInfo) {
+                int posMs = UpnpMetadataCreator.parseTimeToMs(positionInfo.getRelTime());
+                mainHandler.post(() -> callback.onPosition(posMs));
+            }
+
+            @Override
+            public void failure(ActionInvocation invocation, UpnpResponse response, String msg) {
+                Log.w(TAG, "GetPositionInfo failed: " + msg);
+                mainHandler.post(() -> callback.onPosition(0));
             }
         });
     }

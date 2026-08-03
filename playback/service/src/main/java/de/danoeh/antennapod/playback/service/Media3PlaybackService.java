@@ -186,6 +186,9 @@ public class Media3PlaybackService extends MediaLibraryService {
                 super.seekTo(positionMs);
                 EventBus.getDefault().post(
                         new PlaybackPositionEvent((int) player.getCurrentPosition(), (int) player.getDuration()));
+                if (upnpSession != null) {
+                    upnpSession.seekTo((int) positionMs);
+                }
             }
         };
         player.addListener(playerListener);
@@ -324,6 +327,13 @@ public class Media3PlaybackService extends MediaLibraryService {
                     startSleepTimer(SleepTimerPreferences.timerMillisOrEpisodes());
                 }
             }
+            if (upnpSession != null) {
+                if (isPlaying) {
+                    upnpSession.resume();
+                } else {
+                    upnpSession.pause();
+                }
+            }
         }
 
         @Override
@@ -395,13 +405,14 @@ public class Media3PlaybackService extends MediaLibraryService {
     }
 
     private void onUpnpSessionChanged() {
-        if (upnpSession != null) {
-            upnpSession.stop();
-            upnpSession = null;
-        }
         stopVolumeObserver();
-        UpnpMediaSession session = UpnpMediaSession.fromCurrentDevice();
-        if (session != null) {
+        UpnpMediaSession newSession = UpnpMediaSession.fromCurrentDevice();
+        if (newSession != null) {
+            // Connecting (or switching devices): stop any prior session and start fresh
+            if (upnpSession != null) {
+                upnpSession.stop();
+            }
+            upnpSession = null;
             String streamUrl = getStreamUrlFromCurrentPlayable();
             if (streamUrl == null) {
                 Log.w(TAG, "onUpnpSessionChanged: no HTTP stream URL, cannot cast");
@@ -409,12 +420,23 @@ public class Media3PlaybackService extends MediaLibraryService {
                 return;
             }
             int positionMs = (int) player.getCurrentPosition();
-            applyVolumeAdaption(0f);  // mute local audio; keep ExoPlayer playing to hold service alive
-            upnpSession = session;
+            applyVolumeAdaption(0f);
+            upnpSession = newSession;
             upnpSession.startPlayback(streamUrl, currentPlayable, positionMs);
             startVolumeObserver();
+        } else if (upnpSession != null) {
+            // Disconnecting: query WiiM's actual position before handing back to ExoPlayer
+            final UpnpMediaSession sessionToStop = upnpSession;
+            upnpSession = null;
+            sessionToStop.getPositionMs(new Handler(Looper.getMainLooper()), positionMs -> {
+                if (positionMs > 0) {
+                    player.seekTo(positionMs);
+                }
+                sessionToStop.stop();
+                applyVolumeAdaption(1f);
+            });
         } else {
-            applyVolumeAdaption(1f);  // restore local audio
+            applyVolumeAdaption(1f);
         }
     }
 
@@ -563,6 +585,13 @@ public class Media3PlaybackService extends MediaLibraryService {
                                 applyVolumeAdaption(1.0f);
                             }
                             updatePlaybackPreferences();
+                            if (upnpSession != null) {
+                                String streamUrl = getStreamUrlFromCurrentPlayable();
+                                if (streamUrl != null) {
+                                    upnpSession.startPlayback(streamUrl, currentPlayable,
+                                            (int) player.getCurrentPosition());
+                                }
+                            }
                         },
                                 error -> Log.e(TAG, "Failed to load current media", error));
 
@@ -873,6 +902,9 @@ public class Media3PlaybackService extends MediaLibraryService {
     }
 
     private void applyVolumeAdaption(float baseVolume) {
+        if (upnpSession != null) {
+            baseVolume = 0f;  // keep muted while casting regardless of caller intent
+        }
         float v = baseVolume * volumeAdaptionFactor;
         if (v > 1) {
             player.setVolume(1.0f);
